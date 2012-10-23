@@ -146,10 +146,6 @@ class GearmanClient extends GearmanService
             $this->setServer($settings['defaults']['servers']);
         }
 
-        if ($this->serversSet) {
-            return $this;
-        }
-
         if (is_array($this->server)) {
             foreach ($this->server as $server) {
                 $gearmanClient->addServer($server['hostname'], $server['port']);
@@ -158,7 +154,6 @@ class GearmanClient extends GearmanService
             $gearmanClient->addServer();
         }
 
-        $this->serversSet = true;
         return $this;
     }
 
