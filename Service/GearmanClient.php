@@ -9,7 +9,7 @@ use Mmoreramerino\GearmanBundle\Exceptions\NoCallableGearmanMethodException;
 /**
  * Implementation of GearmanInterface
  *
- * @author Marc Morera <marc@ulabox.com>
+ * @author Marc Morera <yuhu@mmoreram.com>
  */
 class GearmanClient extends GearmanService
 {
@@ -31,6 +31,13 @@ class GearmanClient extends GearmanService
     public $server = null;
 
     /**
+     * Whether or not the php GearmanClient servers have been set
+     *
+     * @var boolean
+     */
+    private $serversSet = null;
+
+    /**
      * If workers are not loaded, they're loaded and returned.
      * Otherwise, they are simply returned
      *
@@ -41,6 +48,7 @@ class GearmanClient extends GearmanService
         /**
          * Always will be an Array
          */
+
         return $this->setWorkers();
     }
 
@@ -113,14 +121,13 @@ class GearmanClient extends GearmanService
     /**
      * Set server of gearman
      *
-     * @param type $servername Server name (must be ip)
-     * @param type $port       Port of server. By default 4730
+     * @param array $servers server array keyed by hostname=>port
      *
      * @return GearmanClient Returns self object
      */
-    public function setServer($servername, $port = 4730)
+    public function setServer($servers = array())
     {
-        $this->server = array($servername, $port);
+        $this->server = $servers;
 
         return $this;
     }
@@ -130,17 +137,28 @@ class GearmanClient extends GearmanService
      *
      * @param GearmanClient $gearmanClient Object to include servers
      *
-     * return true
+     * @return GearmanClient Returns self object
      */
     private function assignServers(\GearmanClient $gearmanClient)
     {
-        if (null === $this->server || !is_array($this->server)) {
-
-            $gearmanClient->addServer();
-        } else {
-
-            $gearmanClient->addServer($this->server[0], $this->server[1]);
+        if (empty($this->servers)) {
+            $this->setServer($this->getSettings()['defaults']['servers']);
         }
+
+        if ($this->serversSet) {
+            return $this;
+        }
+
+        if (is_array($this->server)) {
+            foreach ($this->server as $server) {
+                $gearmanClient->addServer($server['hostname'], $server['port']);
+            }
+        } else {
+            $gearmanClient->addServer();
+        }
+
+        $this->serversSet = true;
+        return $this;
     }
 
     /**
@@ -170,10 +188,11 @@ class GearmanClient extends GearmanService
      * @param string $unique A unique ID used to identify a particular task
      *
      * @return string A string representing the results of running a task.
-     * @depracated
+     * @deprecated
      */
     public function doJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'do', $unique);
     }
 
@@ -189,6 +208,7 @@ class GearmanClient extends GearmanService
      */
     public function doNormalJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doNormal', $unique);
     }
 
@@ -205,6 +225,7 @@ class GearmanClient extends GearmanService
      */
     public function doBackgroundJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doBackground', $unique);
     }
 
@@ -222,6 +243,7 @@ class GearmanClient extends GearmanService
      */
     public function doHighJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doHigh', $unique);
     }
 
@@ -237,6 +259,7 @@ class GearmanClient extends GearmanService
      */
     public function doHighBackgroundJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doHighBackground', $unique);
     }
 
@@ -253,6 +276,7 @@ class GearmanClient extends GearmanService
      */
     public function doLowJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doLow', $unique);
     }
 
@@ -268,6 +292,7 @@ class GearmanClient extends GearmanService
      */
     public function doLowBackgroundJob($name, $params = array(), $unique = null)
     {
+
         return $this->enqueue($name, $params, 'doLowBackground', $unique);
     }
 
@@ -421,6 +446,8 @@ class GearmanClient extends GearmanService
      * @param Mixed  $context Application context to associate with a task
      * @param string $unique  A unique ID used to identify a particular task
      * @param string $method  Method to perform
+     *
+     * @return GearmanClient Return this object
      */
     private function enqueueTask($name, $params, $context, $unique, $method)
     {
@@ -432,16 +459,22 @@ class GearmanClient extends GearmanService
             'method'    =>  $method,
             );
         $this->addTaskToStructure($task);
+
+        return $this;
     }
 
     /**
      * Appends a task structure into taskStructure array
      *
      * @param array $task Task structure
+     *
+     * @return GearmanClient Return this object
      */
     private function addTaskToStructure(array $task)
     {
         $this->taskStructure['tasks'][] = $task;
+
+        return $this;
     }
 
 
@@ -464,9 +497,10 @@ class GearmanClient extends GearmanService
             $jobName = $task['name'];
             $worker = $this->getJob($jobName);
             if (false !== $worker) {
-                $gearmanClient->$type($worker['job']['realCallableName'], serialize($type['params']), $type['context'], $type['unique']);
+                $gearmanClient->$type($worker['job']['realCallableName'], serialize($task['params']), $task['context'], $task['unique']);
             }
         }
+
         return $gearmanClient->runTasks();
     }
 }
