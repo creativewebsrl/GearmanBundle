@@ -142,7 +142,8 @@ class GearmanClient extends GearmanService
     private function assignServers(\GearmanClient $gearmanClient)
     {
         if (empty($this->servers)) {
-            $this->setServer($this->getSettings()['defaults']['servers']);
+            $settings = $this->getSettings();
+            $this->setServer($settings['defaults']['servers']);
         }
 
         if ($this->serversSet) {
